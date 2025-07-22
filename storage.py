@@ -48,3 +48,12 @@ class Storage:
             self._write(data)
             return True
         return False
+
+    def set_reminder_time(self, user_id, reminder_time):
+        data = self._read()
+        if user_id not in data:
+            data[user_id] = {"events": [], "reminder_time": reminder_time}
+        else:
+            data[user_id]["reminder_time"] = reminder_time
+        self._write(data)
+        return True

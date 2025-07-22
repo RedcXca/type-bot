@@ -18,7 +18,6 @@ storage = Storage('storage.json')
 
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user}')
     reminder_loop.start()
 
 @bot.command()
@@ -32,7 +31,7 @@ async def add(ctx, *, event: str):
     await ctx.send(f'```Event added: {event}```')
     if first_time:
         await ctx.send('''```
-🐱🌹 This bot will DM you every day at 11:30 pm (EST) with your reminders 🌹🐱
+🐱🌹 This bot will DM you every day at 11:30 pm by default (EST) with your reminders 🌹🐱
 Commands:
 > type add "example event"
 > type list
@@ -76,8 +75,13 @@ async def edit(ctx, index: int, *, event: str):
         await ctx.send('```Invalid index.```')
 
 @bot.command()
-async def time(ctx, time: str):
+async def time(ctx, time: str = ""):
     user_id = str(ctx.author.id)
+    if not time or time.strip() == "":
+        data = storage._read()
+        reminder_time = data.get(user_id, {}).get("reminder_time", "03:30")
+        await ctx.send(f'```Your current reminder time is set to {reminder_time} UTC.```')
+        return
     try:
         hour, minute = map(int, time.split(':'))
         if 0 <= hour < 24 and 0 <= minute < 60:
@@ -85,8 +89,10 @@ async def time(ctx, time: str):
             await ctx.send(f'```Reminder time set to {hour:02d}:{minute:02d} UTC. You will be pinged at this time every day.```')
         else:
             await ctx.send('```Invalid time format. Use HH:MM in UTC (e.g., 18:02).```')
-    except Exception:
+    except ValueError as ve:
         await ctx.send('```Invalid time format. Use HH:MM in UTC (e.g., 18:02).```')
+    except Exception as e:
+        await ctx.send(f'```Unknown error: {str(e)}```')
 
 @bot.command()
 async def shit(ctx):
@@ -103,6 +109,6 @@ async def reminder_loop():
             if events:
                 user = await bot.fetch_user(int(user_id))
                 msg = '\n'.join([f'{i+1}. {e} 🐱🌹' for i, e in enumerate(sorted(events))])
-                await user.send(f'```Your events for today:\n{msg}```')
+                await user.send(f'```Your upcoming events:\n{msg}```')
 
 bot.run(TOKEN)
