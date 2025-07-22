@@ -5,13 +5,6 @@ This is not a public bot to invite—it's a template for you to create and run y
 
 A simple Discord bot for personal reminders and task management. Built with Python and discord.py.
 
-## Features
-- Set a daily reminder time
-- Add tasks with date and time
-- List tasks (sorted, indexed)
-- Remove tasks by index
-- All data saved in `events.json`
-
 ## Commands
 
 🐱🌹 **Commands:** 🌹🐱
