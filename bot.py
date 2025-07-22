@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 from storage import Storage
 from datetime import datetime
 
-with open("bot.pid", "w") as f:
-    f.write(str(os.getpid()))
+with open("bot.pid", "a") as f:
+    f.write(str(os.getpid()) + "\n")
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
