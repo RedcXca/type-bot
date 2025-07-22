@@ -31,7 +31,8 @@ A simple Discord bot for personal reminders and task management. Built with Pyth
    ```
    The bot will append its PID (process ID) to `bot.pid` every time it is started. To stop all running bot processes, use:
    ```cmd
-   for /f %i in (bot.pid) do taskkill /F /PID %i && del bot.pid
+   for /f %i in (bot.pid) do taskkill /F /PID %i
+   del bot.pid
    ```
 
 ## File Overview

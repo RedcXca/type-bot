@@ -13,7 +13,14 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix='type ', intents=intents)
+bot = commands.Bot(command_prefix='type ', intents=intents, help_command=None)
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.send('```Unknown command. Type `type help` for a list of commands.```')
+    else:
+        raise error
 storage = Storage('storage.json')
 
 @bot.event
@@ -32,13 +39,26 @@ async def add(ctx, *, event: str):
     if first_time:
         await ctx.send('''```
 🐱🌹 This bot will DM you every day at 11:30 pm by default (EST) with your reminders 🌹🐱
-Commands:
 > type add "example event"
 > type list
 > type remove 1
 > type edit 1 "updated event"
 > type time HH:MM (UTC)
+> type help
 ```''')
+
+@bot.command()
+async def help(ctx):
+    msg = '''```
+🐱🌹 Type Bot Help 🌹🐱
+> type add "example event"
+> type list
+> type remove 1
+> type edit 1 "updated event"
+> type time HH:MM (UTC)
+> type help
+```'''
+    await ctx.send(msg)
 
 @bot.command()
 async def list(ctx):
