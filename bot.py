@@ -1,9 +1,12 @@
+import os
 import discord
 from discord.ext import commands, tasks
-import os
 from dotenv import load_dotenv
 from storage import Storage
 from datetime import datetime
+
+with open("bot.pid", "w") as f:
+    f.write(str(os.getpid()))
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -19,23 +22,17 @@ async def on_ready():
     reminder_loop.start()
 
 @bot.command()
-async def setup(ctx, time: str):
-    user_id = str(ctx.author.id)
-    storage.set_reminder_time(user_id, time)
-    await ctx.send(f'Reminder time set to {time}')
-
-@bot.command()
 async def add(ctx, *, event: str):
     user_id = str(ctx.author.id)
     first_time = False
     events = storage.list_tasks(user_id)
     if not events:
         first_time = True
-    storage.add_task(user_id, {"event": event, "user_id": user_id})
+    storage.add_task(user_id, event)
     await ctx.send(f'```Event added: {event}```')
     if first_time:
         await ctx.send('''```
-🐱🌹 This bot will ping you every day at 11:30 pm (EST) 🌹🐱
+🐱🌹 This bot will DM you every day at 11:30 pm (EST) with your reminders 🌹🐱
 Commands:
 > type add "example event"
 > type list
@@ -51,8 +48,8 @@ async def list(ctx):
     if not events:
         await ctx.send('```No events found.```')
         return
-    sorted_events = sorted(events, key=lambda x: x["event"])
-    msg = '\n'.join([f'{i+1}. {e["event"]}' for i, e in enumerate(sorted_events)])
+    sorted_events = sorted(events)
+    msg = '\n'.join([f'{i+1}. {e}' for i, e in enumerate(sorted_events)])
     await ctx.send(f'```{msg}```')
 
 @bot.command()
@@ -61,7 +58,7 @@ async def remove(ctx, index: int):
     events = storage.list_tasks(user_id)
     idx = index - 1
     if 0 <= idx < len(events):
-        removed_event = events[idx]["event"]
+        removed_event = events[idx]
         success = storage.remove_task(user_id, idx)
         if success:
             await ctx.send(f'```Event {index} removed: {removed_event}```')
@@ -72,7 +69,7 @@ async def remove(ctx, index: int):
 @bot.command()
 async def edit(ctx, index: int, *, event: str):
     user_id = str(ctx.author.id)
-    success = storage.edit_task(user_id, index - 1, {"event": event, "user_id": user_id})
+    success = storage.edit_task(user_id, index - 1, event)
     if success:
         await ctx.send(f'```Event {index} updated to: {event}```')
     else:
@@ -105,7 +102,7 @@ async def reminder_loop():
             events = user_data.get("events", [])
             if events:
                 user = await bot.fetch_user(int(user_id))
-                msg = '\n'.join([f'{i+1}. {e["event"]} 🐱🌹' for i, e in enumerate(sorted(events, key=lambda x: x["event"]))])
+                msg = '\n'.join([f'{i+1}. {e} 🐱🌹' for i, e in enumerate(sorted(events))])
                 await user.send(f'```Your events for today:\n{msg}```')
 
 bot.run(TOKEN)

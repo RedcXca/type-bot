@@ -21,26 +21,23 @@ A simple Discord bot for personal reminders and task management. Built with Pyth
    ```bash
    pip install -r requirements.txt
    ```
-2. Create a `.env` file with your bot token (you must use your own bot token from the Discord Developer Portal):
+2. Create a `.env` file with your bot token (get your own token from the Discord Developer Portal):
    ```env
    DISCORD_TOKEN=your_token_here
    ```
-3. Run the bot in the background (bash):
-   ```bash
-   nohup python bot.py &
+3. Run the bot in the background (Windows Command Prompt, no console window):
+   ```cmd
+   start pythonw bot.py
    ```
-   This will keep the bot running even after you close the terminal.
-
-4. To kill the bot process:
-   ```bash
-   ps aux | grep bot.py
-   kill <PID>
+   The bot will write its PID (process ID) to `bot.pid` when started. To stop it, use:
+   ```cmd
+   taskkill /PID <PID> /F
    ```
-   Replace `<PID>` with the process ID shown in the output.
+   Replace `<PID>` with the number found in the `bot.pid` file.
 
 ## File Overview
 - `bot.py` – Discord bot logic and commands
 - `storage.py` – Handles reading/writing reminders and tasks
-- `storage.json` – Stores user data (all data is stored raw locally in an unencrypted JSON file but it's just for personal use)
+- `storage.json` – Stores user data (all data is stored raw locally in an unencrypted JSON file for personal use)
 
 ---
