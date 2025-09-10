@@ -4,6 +4,7 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from storage import Storage
 from datetime import datetime
+import re
 
 with open("bot.pid", "a") as f:
     f.write(str(os.getpid()) + "\n")
@@ -22,6 +23,12 @@ async def on_command_error(ctx, error):
     else:
         raise error
 storage = Storage('storage.json')
+
+def natural_sort_key(text):
+    import re
+    def convert(text):
+        return int(text) if text.isdigit() else text.lower()
+    return [convert(c) for c in re.split('([0-9]+)', text)]
 
 @bot.event
 async def on_ready():
@@ -67,7 +74,7 @@ async def list(ctx):
     if not events:
         await ctx.send('```No events found.```')
         return
-    sorted_events = sorted(events)
+    sorted_events = sorted(events, key=natural_sort_key)
     msg = '\n'.join([f'{i+1}. {e}' for i, e in enumerate(sorted_events)])
     await ctx.send(f'```{msg}```')
 
@@ -128,7 +135,8 @@ async def reminder_loop():
             events = user_data.get("events", [])
             if events:
                 user = await bot.fetch_user(int(user_id))
-                msg = '\n'.join([f'{i+1}. {e} 🐱🌹' for i, e in enumerate(sorted(events))])
+                sorted_events = sorted(events, key=natural_sort_key)
+                msg = '\n'.join([f'{i+1}. {e} 🐱🌹' for i, e in enumerate(sorted_events)])
                 await user.send(f'```Your upcoming events:\n{msg}```')
 
 bot.run(TOKEN)
