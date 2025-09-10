@@ -5,3 +5,5 @@ __pycache__/
 notes.txt
 storage.json
 bot.pid
+start_bot.bat
+stop_bot.bat
