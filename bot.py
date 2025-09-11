@@ -82,10 +82,13 @@ async def list(ctx):
 async def remove(ctx, index: int):
     user_id = str(ctx.author.id)
     events = storage.list_tasks(user_id)
+    sorted_events = sorted(events, key=natural_sort_key)
     idx = index - 1
-    if 0 <= idx < len(events):
-        removed_event = events[idx]
-        success = storage.remove_task(user_id, idx)
+    if 0 <= idx < len(sorted_events):
+        event_to_remove = sorted_events[idx]
+        orig_idx = events.index(event_to_remove)
+        removed_event = events[orig_idx]
+        success = storage.remove_task(user_id, orig_idx)
         if success:
             await ctx.send(f'```Event {index} removed: {removed_event}```')
         else:
@@ -95,9 +98,17 @@ async def remove(ctx, index: int):
 @bot.command()
 async def edit(ctx, index: int, *, event: str):
     user_id = str(ctx.author.id)
-    success = storage.edit_task(user_id, index - 1, event)
-    if success:
-        await ctx.send(f'```Event {index} updated to: {event}```')
+    events = storage.list_tasks(user_id)
+    sorted_events = sorted(events, key=natural_sort_key)
+    idx = index - 1
+    if 0 <= idx < len(sorted_events):
+        event_to_edit = sorted_events[idx]
+        orig_idx = events.index(event_to_edit)
+        success = storage.edit_task(user_id, orig_idx, event)
+        if success:
+            await ctx.send(f'```Event {index} updated to: {event}```')
+        else:
+            await ctx.send('```Invalid index.```')
     else:
         await ctx.send('```Invalid index.```')
 
