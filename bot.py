@@ -95,6 +95,7 @@ async def remove(ctx, index: int):
             await ctx.send('```Error removing event.```')
     else:
         await ctx.send('```Invalid index.```')
+
 @bot.command()
 async def edit(ctx, index: int, *, event: str):
     user_id = str(ctx.author.id)
