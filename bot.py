@@ -4,7 +4,7 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from storage import Storage
 from datetime import datetime
-from util import sort_key, extract_datetime, strip_year
+from utils import sort_key, get_date, strip_year
 import re
 
 with open("bot.pid", "a") as f:
@@ -50,7 +50,7 @@ async def add(ctx, *, text: str):
     if not events:
         first_time = True
 
-    year = extract_datetime(text).year if extract_datetime(text) != datetime.max else datetime.now().year
+    year = get_date(text).year
     storage.add_task(user_id, strip_year(text), year)
     await ctx.send(f'```Event added: {strip_year(text)}```')
     if first_time:
@@ -84,13 +84,14 @@ async def remove(ctx, *indices: int):
         return
     sorted_events = sorted(events, key=sort_key)
     removed = []
+    # remove from highest index to lowest to avoid shifting issues
     for index in sorted(set(indices), reverse=True):
         if 0 <= index - 1 < len(sorted_events):
-            event_to_remove = sorted_events[index - 1]
-            storage_index = events.index(event_to_remove)
-            removed_event = events[storage_index]
+            storage_index = events.index(sorted_events[index - 1])
+            event = events[storage_index]
             storage.remove_task(user_id, storage_index)
-            removed.append(f"{index}. {removed_event['text']}")
+            removed.append(f"{index}. {event['text']}")
+            events.pop(storage_index)
     if removed:
         removed.reverse()
         await ctx.send(f"```Removed events:\n" + "\n".join(removed) + "```")
@@ -105,7 +106,7 @@ async def edit(ctx, index: int, *, text: str):
     if 0 <= index - 1 < len(sorted_events):
         event_to_edit = sorted_events[index - 1]
         storage_index = events.index(event_to_edit)
-        year = extract_datetime(text).year if extract_datetime(text) != datetime.max else datetime.now().year
+        year = get_date(text).year
         success = storage.edit_task(user_id, storage_index, strip_year(text), year)
         if success:
             await ctx.send(f'```Event {index} updated to: {strip_year(text)}```')
