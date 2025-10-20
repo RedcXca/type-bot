@@ -6,8 +6,9 @@ def strip_year(text: str) -> str:
     text = re.sub(r'(\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+[0-3]?\d)\s+\d{4}', r'\1', text, flags=re.I)
     return text
 
+# returns date found in string, defaults to current year
 # only supports formats like oct 20 or oct 20 2025
-def extract_datetime(event: str):
+def get_date(event: str):
     # consumes month, then spaces, then day, then optional year
     DATE_RE = re.compile(r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+[0-3]?\d(?:\s+\d{4})?\b', re.I)
     m = DATE_RE.search(event)
@@ -17,7 +18,6 @@ def extract_datetime(event: str):
     try:
         return datetime.strptime(s, "%b %d %Y")
     except ValueError:
-
         return datetime.strptime(s, "%b %d").replace(year=datetime.now().year)
 
 def natural_sort(text):
@@ -28,7 +28,7 @@ def natural_sort(text):
 def sort_key(event):
     text = event["text"]
     year = event["year"]
-    date = extract_datetime(text)
+    date = get_date(text)
     if date != datetime.max and year:
         date = date.replace(year=year)
     # return dated events first, then undated sorted naturally
