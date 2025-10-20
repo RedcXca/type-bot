@@ -4,6 +4,7 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from storage import Storage
 from datetime import datetime
+from util import sort_key, extract_datetime, strip_year
 import re
 
 with open("bot.pid", "a") as f:
@@ -24,35 +25,9 @@ async def on_command_error(ctx, error):
         raise error
 storage = Storage('storage.json')
 
-def natural_sort_key(text):
-    import re
-    def convert(text):
-        return int(text) if text.isdigit() else text.lower()
-    return [convert(c) for c in re.split('([0-9]+)', text)]
-
 @bot.event
 async def on_ready():
     reminder_loop.start()
-
-@bot.command()
-async def add(ctx, *, event: str):
-    user_id = str(ctx.author.id)
-    first_time = False
-    events = storage.list_tasks(user_id)
-    if not events:
-        first_time = True
-    storage.add_task(user_id, event)
-    await ctx.send(f'```Event added: {event}```')
-    if first_time:
-        await ctx.send('''```
-🐱🌹 This bot will DM you every day at 11:30 pm by default (EST) with your reminders 🌹🐱
-> type add "example event"
-> type list
-> type remove 1
-> type edit 1 "updated event"
-> type time HH:MM (UTC)
-> type help
-```''')
 
 @bot.command()
 async def help(ctx):
@@ -68,14 +43,36 @@ async def help(ctx):
     await ctx.send(msg)
 
 @bot.command()
+async def add(ctx, *, text: str):
+    user_id = str(ctx.author.id)
+    first_time = False
+    events = storage.list_tasks(user_id)
+    if not events:
+        first_time = True
+
+    year = extract_datetime(text).year if extract_datetime(text) != datetime.max else datetime.now().year
+    storage.add_task(user_id, strip_year(text), year)
+    await ctx.send(f'```Event added: {strip_year(text)}```')
+    if first_time:
+        await ctx.send('''```
+🐱🌹 This bot will DM you every day at 11:30 pm by default (EST) with your reminders 🌹🐱
+> type add "example event"
+> type list
+> type remove 1
+> type edit 1 "updated event"
+> type time HH:MM (UTC)
+> type help
+```''')
+
+@bot.command()
 async def list(ctx):
     user_id = str(ctx.author.id)
     events = storage.list_tasks(user_id)
     if not events:
         await ctx.send('```No events found.```')
         return
-    sorted_events = sorted(events, key=natural_sort_key)
-    msg = '\n'.join([f'{i+1}. {e}' for i, e in enumerate(sorted_events)])
+    sorted_events = sorted(events, key=sort_key)
+    msg = '\n'.join([f'{i+1}. {e["text"]}' for i, e in enumerate(sorted_events)])
     await ctx.send(f'```{msg}```')
 
 @bot.command()
@@ -85,16 +82,15 @@ async def remove(ctx, *indices: int):
     if not events:
         await ctx.send('```No events found.```')
         return
-    sorted_events = sorted(events, key=natural_sort_key)
+    sorted_events = sorted(events, key=sort_key)
     removed = []
-    # sort in reverse so index doesn't change as shit is removed
     for index in sorted(set(indices), reverse=True):
         if 0 <= index - 1 < len(sorted_events):
             event_to_remove = sorted_events[index - 1]
             storage_index = events.index(event_to_remove)
             removed_event = events[storage_index]
             storage.remove_task(user_id, storage_index)
-            removed.append(f"{index}. {removed_event}")
+            removed.append(f"{index}. {removed_event['text']}")
     if removed:
         removed.reverse()
         await ctx.send(f"```Removed events:\n" + "\n".join(removed) + "```")
@@ -102,16 +98,17 @@ async def remove(ctx, *indices: int):
         await ctx.send("```Invalid indices.```")
 
 @bot.command()
-async def edit(ctx, index: int, *, event: str):
+async def edit(ctx, index: int, *, text: str):
     user_id = str(ctx.author.id)
     events = storage.list_tasks(user_id)
-    sorted_events = sorted(events, key=natural_sort_key)
+    sorted_events = sorted(events, key=sort_key)
     if 0 <= index - 1 < len(sorted_events):
         event_to_edit = sorted_events[index - 1]
         storage_index = events.index(event_to_edit)
-        success = storage.edit_task(user_id, storage_index, event)
+        year = extract_datetime(text).year if extract_datetime(text) != datetime.max else datetime.now().year
+        success = storage.edit_task(user_id, storage_index, strip_year(text), year)
         if success:
-            await ctx.send(f'```Event {index} updated to: {event}```')
+            await ctx.send(f'```Event {index} updated to: {strip_year(text)}```')
         else:
             await ctx.send('```Invalid index.```')
     else:
@@ -151,8 +148,8 @@ async def reminder_loop():
             events = user_data.get("events", [])
             if events:
                 user = await bot.fetch_user(int(user_id))
-                sorted_events = sorted(events, key=natural_sort_key)
-                msg = '\n'.join([f'{i+1}. {e} 🐱🌹' for i, e in enumerate(sorted_events)])
+                sorted_events = sorted(events, key=sort_key)
+                msg = '\n'.join([f'{i+1}. {e["text"]} 🐱🌹' for i, e in enumerate(sorted_events)])
                 await user.send(f'```Your upcoming events:\n{msg}```')
 
 bot.run(TOKEN)

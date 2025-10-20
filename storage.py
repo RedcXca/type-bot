@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import datetime
+import re
 
 class Storage:
     def __init__(self, filename):
@@ -22,10 +23,14 @@ class Storage:
         with open(self.filename, 'w') as f:
             json.dump(data, f, indent=2)
 
-    def add_task(self, user_id, event_obj):
+    def add_task(self, user_id, text, year):
         data = self._read()
         data.setdefault(user_id, {"events": []})
-        data[user_id]["events"].append(event_obj)
+       
+        data[user_id]["events"].append({
+            "text": text.strip(),
+            "year": year
+        })
         self._write(data)
 
     def list_tasks(self, user_id):
@@ -40,11 +45,14 @@ class Storage:
             return True
         return False
 
-    def edit_task(self, user_id, index, event_obj):
+    def edit_task(self, user_id, index, text, year):
         data = self._read()
         events = data.get(user_id, {}).get("events", [])
         if 0 <= index < len(events):
-            events[index] = event_obj
+            events[index] = {
+                "text": text,
+                "year": year
+            }
             self._write(data)
             return True
         return False
