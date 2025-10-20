@@ -79,33 +79,37 @@ async def list(ctx):
     await ctx.send(f'```{msg}```')
 
 @bot.command()
-async def remove(ctx, index: int):
+async def remove(ctx, *indices: int):
     user_id = str(ctx.author.id)
     events = storage.list_tasks(user_id)
+    if not events:
+        await ctx.send('```No events found.```')
+        return
     sorted_events = sorted(events, key=natural_sort_key)
-    idx = index - 1
-    if 0 <= idx < len(sorted_events):
-        event_to_remove = sorted_events[idx]
-        orig_idx = events.index(event_to_remove)
-        removed_event = events[orig_idx]
-        success = storage.remove_task(user_id, orig_idx)
-        if success:
-            await ctx.send(f'```Event {index} removed: {removed_event}```')
-        else:
-            await ctx.send('```Error removing event.```')
+    removed = []
+    # sort in reverse so index doesn't change as shit is removed
+    for index in sorted(set(indices), reverse=True):
+        if 0 <= index - 1 < len(sorted_events):
+            event_to_remove = sorted_events[index - 1]
+            storage_index = events.index(event_to_remove)
+            removed_event = events[storage_index]
+            storage.remove_task(user_id, storage_index)
+            removed.append(f"{index}. {removed_event}")
+    if removed:
+        removed.reverse()
+        await ctx.send(f"```Removed events:\n" + "\n".join(removed) + "```")
     else:
-        await ctx.send('```Invalid index.```')
+        await ctx.send("```Invalid indices.```")
 
 @bot.command()
 async def edit(ctx, index: int, *, event: str):
     user_id = str(ctx.author.id)
     events = storage.list_tasks(user_id)
     sorted_events = sorted(events, key=natural_sort_key)
-    idx = index - 1
-    if 0 <= idx < len(sorted_events):
-        event_to_edit = sorted_events[idx]
-        orig_idx = events.index(event_to_edit)
-        success = storage.edit_task(user_id, orig_idx, event)
+    if 0 <= index - 1 < len(sorted_events):
+        event_to_edit = sorted_events[index - 1]
+        storage_index = events.index(event_to_edit)
+        success = storage.edit_task(user_id, storage_index, event)
         if success:
             await ctx.send(f'```Event {index} updated to: {event}```')
         else:
