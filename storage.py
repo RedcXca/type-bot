@@ -23,13 +23,13 @@ class Storage:
         with open(self.filename, 'w') as f:
             json.dump(data, f, indent=2)
 
-    def add_task(self, user_id, text, year):
+    def add_task(self, user_id, text, date):
         data = self._read()
         data.setdefault(user_id, {"events": []})
        
         data[user_id]["events"].append({
             "text": text.strip(),
-            "year": year
+            "date": date.strftime("%Y-%m-%d") if date != datetime.max else None
         })
         self._write(data)
 
@@ -45,13 +45,13 @@ class Storage:
             return True
         return False
 
-    def edit_task(self, user_id, index, text, year):
+    def edit_task(self, user_id, index, text, date):
         data = self._read()
         events = data.get(user_id, {}).get("events", [])
         if 0 <= index < len(events):
             events[index] = {
                 "text": text,
-                "year": year
+                "date": date.strftime("%Y-%m-%d") if date != datetime.max else None
             }
             self._write(data)
             return True

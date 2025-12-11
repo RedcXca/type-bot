@@ -7,6 +7,7 @@ from datetime import datetime
 from utils import sort_key, get_date, strip_year
 import re
 
+os.makedirs("self", exist_ok=True)
 with open("self/bot.pid", "a") as f:
     f.write(str(os.getpid()) + "\n")
 
@@ -50,8 +51,8 @@ async def add(ctx, *, text: str):
     if not events:
         first_time = True
 
-    year = get_date(text).year
-    storage.add_task(user_id, strip_year(text), year)
+    date = get_date(text)
+    storage.add_task(user_id, strip_year(text), date)
     await ctx.send(f'```Event added: {strip_year(text)}```')
     if first_time:
         await ctx.send('''```
@@ -106,8 +107,8 @@ async def edit(ctx, index: int, *, text: str):
     if 0 <= index - 1 < len(sorted_events):
         event_to_edit = sorted_events[index - 1]
         storage_index = events.index(event_to_edit)
-        year = get_date(text).year
-        success = storage.edit_task(user_id, storage_index, strip_year(text), year)
+        date = get_date(text)
+        success = storage.edit_task(user_id, storage_index, strip_year(text), date)
         if success:
             await ctx.send(f'```Event {index} updated to: {strip_year(text)}```')
         else:

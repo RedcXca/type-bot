@@ -27,10 +27,10 @@ def natural_sort(text):
 
 def sort_key(event):
     text = event["text"]
-    year = event["year"]
-    date = get_date(text)
-    if date != datetime.max and year:
-        date = date.replace(year=year)
-    # return dated events first, then undated sorted naturally
+    date_str = event.get("date")
+    if date_str:
+        date = datetime.strptime(date_str, "%Y-%m-%d")
+    else:
+        date = datetime.max
     return (0, date) if date != datetime.max else (1, natural_sort(text))
 
