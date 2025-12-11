@@ -7,7 +7,7 @@ from datetime import datetime
 from utils import sort_key, get_date, strip_year
 import re
 
-with open("bot.pid", "a") as f:
+with open("self/bot.pid", "a") as f:
     f.write(str(os.getpid()) + "\n")
 
 load_dotenv()
