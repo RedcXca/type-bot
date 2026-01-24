@@ -16,7 +16,7 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix='type ', intents=intents, help_command=None)
+bot = commands.Bot(command_prefix=['type ', 'Type ', 'TYPE '], intents=intents, help_command=None)
 
 @bot.event
 async def on_command_error(ctx, error):
