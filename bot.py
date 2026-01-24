@@ -113,11 +113,13 @@ async def edit(ctx, index: int, *, text: str):
     sorted_events = sorted(events, key=sort_key)
     if 0 <= index - 1 < len(sorted_events):
         event_to_edit = sorted_events[index - 1]
+        old_text = event_to_edit["text"]
         storage_index = events.index(event_to_edit)
         date = get_date(text)
-        success = storage.edit_task(user_id, storage_index, strip_year(text), date)
+        new_text = strip_year(text)
+        success = storage.edit_task(user_id, storage_index, new_text, date)
         if success:
-            await ctx.send(f'```Event {index} updated to: {strip_year(text)}```')
+            await ctx.send(f'```Event {index} updated:\n{old_text}\n→ {new_text}```')
         else:
             await ctx.send('```Invalid index.```')
     else:
