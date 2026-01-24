@@ -52,8 +52,15 @@ async def add(ctx, *, text: str):
         first_time = True
 
     date = get_date(text)
-    storage.add_task(user_id, strip_year(text), date)
-    await ctx.send(f'```Event added: {strip_year(text)}```')
+    stripped = strip_year(text)
+    storage.add_task(user_id, stripped, date)
+
+    # find index of newly added event in sorted list
+    events = storage.list_tasks(user_id)
+    sorted_events = sorted(events, key=sort_key)
+    index = next(i for i, e in enumerate(sorted_events) if e["text"] == stripped) + 1
+
+    await ctx.send(f'```Event added ({index}): {stripped}```')
     if first_time:
         await ctx.send('''```
 🐱🌹 This bot will DM you every day at 11:30 pm by default (EST) with your reminders 🌹🐱
