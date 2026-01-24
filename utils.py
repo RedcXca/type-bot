@@ -25,11 +25,33 @@ def natural_sort(text):
         return int(text) if text.isdigit() else text.lower()
     return [convert(c) for c in re.split('([0-9]+)', text)]
 
+def extract_time(text):
+    """Extract time from text like 'jan 7 16:00 event' or 'jan 7 9:20am event'"""
+    # Match time patterns: 16:00, 9:20, 9:20am, 9:20 am, etc.
+    time_re = re.compile(r'\b(\d{1,2}):(\d{2})\s*(am|pm)?\b', re.I)
+    m = time_re.search(text)
+    if not m:
+        return None
+    hour = int(m.group(1))
+    minute = int(m.group(2))
+    ampm = m.group(3)
+    if ampm:
+        ampm = ampm.lower()
+        if ampm == 'pm' and hour != 12:
+            hour += 12
+        elif ampm == 'am' and hour == 12:
+            hour = 0
+    return (hour, minute)
+
 def sort_key(event):
     text = event["text"]
     date_str = event.get("date")
     if date_str:
         date = datetime.strptime(date_str, "%Y-%m-%d")
+        # Extract time from text and combine with date
+        time = extract_time(text)
+        if time:
+            date = date.replace(hour=time[0], minute=time[1])
     else:
         date = datetime.max
     return (0, date) if date != datetime.max else (1, natural_sort(text))

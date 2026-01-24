@@ -43,16 +43,17 @@ class TestSortKey:
         dated = {"text": "jan 1 party", "date": "2025-01-01"}
         undated = {"text": "do laundry", "date": None}
         assert sort_key(dated) < sort_key(undated)
-    
+
     def test_earlier_date_first(self):
         jan = {"text": "jan event", "date": "2025-01-15"}
         feb = {"text": "feb event", "date": "2025-02-15"}
         assert sort_key(jan) < sort_key(feb)
-    
-    def test_different_years(self):
-        year_2025 = {"text": "dec event", "date": "2025-12-01"}
-        year_2026 = {"text": "jan event", "date": "2026-01-15"}
-        assert sort_key(year_2025) < sort_key(year_2026)
+
+    def test_same_day_sorted_by_time(self):
+        nine = {"text": "jan 7 9:00 breakfast", "date": "2025-01-07"}
+        ten = {"text": "jan 7 10:00 meeting", "date": "2025-01-07"}
+        six_pm = {"text": "jan 7 18:00 dinner", "date": "2025-01-07"}
+        assert sort_key(nine) < sort_key(ten) < sort_key(six_pm)
 
 
 class TestStorage:
