@@ -38,6 +38,7 @@ async def help(ctx):
 > type list
 > type remove 1
 > type edit 1 "updated event"
+> type append 1 "extra text"
 > type time HH:MM (UTC)
 > type help
 ```'''
@@ -68,6 +69,7 @@ async def add(ctx, *, text: str):
 > type list
 > type remove 1
 > type edit 1 "updated event"
+> type append 1 "extra text"
 > type time HH:MM (UTC)
 > type help
 ```''')
@@ -122,6 +124,18 @@ async def edit(ctx, index: int, *, text: str):
             await ctx.send(f'```Event {index} updated:\n{old_text}\n→ {new_text}```')
         else:
             await ctx.send('```Invalid index.```')
+    else:
+        await ctx.send('```Invalid index.```')
+
+@bot.command()
+async def append(ctx, index: int, *, text: str):
+    user_id = str(ctx.author.id)
+    events = storage.list_tasks(user_id)
+    sorted_events = sorted(events, key=sort_key)
+    if 0 <= index - 1 < len(sorted_events):
+        event = sorted_events[index - 1]
+        combined_text = event["text"] + " " + text
+        await edit(ctx, index, text=combined_text)
     else:
         await ctx.send('```Invalid index.```')
 
