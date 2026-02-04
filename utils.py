@@ -51,7 +51,13 @@ def sort_key(event):
         # Extract time from text and combine with date
         time = extract_time(text)
         if time:
-            date = date.replace(hour=time[0], minute=time[1])
+            hour, minute = time
+            if hour >= 24:
+                # 24:00 means midnight of next day
+                from datetime import timedelta
+                date = date + timedelta(days=1)
+                hour = 0
+            date = date.replace(hour=hour, minute=minute)
     else:
         date = datetime.max
     return (0, date) if date != datetime.max else (1, natural_sort(text))
