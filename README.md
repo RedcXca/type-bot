@@ -8,12 +8,29 @@ A simple Discord bot for personal reminders and task management. Built with Pyth
 ## Commands
 
 🐱🌹 **Commands:** 🌹🐱
-- `type add "example event"` – Add a new event
+- `type add "jan 15 example event"` – Add a new event
 - `type list` – List all your events
 - `type remove 1` – Remove the event at index 1 (1-indexed)
 - `type edit 1 "updated event"` – Edit the event at index 1
-- `type time HH:MM (UTC)` – Set your daily reminder time (e.g., 18:02)
-- `type shit` – Bot replies with 'type shit 🐱🌹'
+- `type append 1 "extra text"` – Append text to the event at index 1
+- `type time HH:MM` – Set your daily reminder time in UTC (e.g., 18:02)
+- `type time` – View your current reminder time
+
+## Date & Time Formats
+
+Events are sorted by date and time. Supported formats:
+- `jan 15 dentist` – Date only (defaults to current year)
+- `jan 15 2026 dentist` – Date with year
+- `jan 15 10:30 dentist` – Date with 24-hour time
+- `jan 15 9:30am dentist` – Date with 12-hour time
+- `jan 15 24:00 deadline` – Use 24:00 for end of day (sorts after 23:59)
+
+## Reminders
+
+The bot sends reminders via DM:
+- **Daily summary** – All your events at your configured reminder time (default: 03:30 UTC)
+- **1 hour before** – Events with a specific time get a reminder 1 hour before
+- **1 day before** – Events without a time get a reminder the day before (at your daily reminder time)
 
 ## Setup
 
