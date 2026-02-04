@@ -3,7 +3,7 @@ import os
 import tempfile
 from datetime import datetime
 from storage import Storage
-from utils import get_date, strip_year, sort_key
+from utils import get_date, strip_year, sort_key, extract_time
 
 USER_ID = "123"
 
@@ -38,6 +38,24 @@ class TestStripYear:
         assert strip_year("do laundry") == "do laundry"
 
 
+class TestExtractTime:
+    def test_24_hour_format(self):
+        assert extract_time("jan 7 16:00 event") == (16, 0)
+        assert extract_time("jan 7 9:30 event") == (9, 30)
+
+    def test_12_hour_format(self):
+        assert extract_time("jan 7 9:30am event") == (9, 30)
+        assert extract_time("jan 7 9:30pm event") == (21, 30)
+        assert extract_time("jan 7 12:00pm event") == (12, 0)
+        assert extract_time("jan 7 12:00am event") == (0, 0)
+
+    def test_24_00_returns_24(self):
+        assert extract_time("jan 7 24:00 event") == (24, 0)
+
+    def test_no_time(self):
+        assert extract_time("jan 7 event") is None
+
+
 class TestSortKey:
     def test_dated_before_undated(self):
         dated = {"text": "jan 1 party", "date": "2025-01-01"}
@@ -54,6 +72,12 @@ class TestSortKey:
         ten = {"text": "jan 7 10:00 meeting", "date": "2025-01-07"}
         six_pm = {"text": "jan 7 18:00 dinner", "date": "2025-01-07"}
         assert sort_key(nine) < sort_key(ten) < sort_key(six_pm)
+
+    def test_24_00_sorts_after_23_59(self):
+        late = {"text": "jan 7 23:30 late night", "date": "2025-01-07"}
+        midnight = {"text": "jan 7 24:00 midnight", "date": "2025-01-07"}
+        next_day = {"text": "jan 8 00:30 early morning", "date": "2025-01-08"}
+        assert sort_key(late) < sort_key(midnight) < sort_key(next_day)
 
 
 class TestStorage:
@@ -124,3 +148,41 @@ class TestStorage:
     def test_list_tasks_empty(self, storage):
         events = storage.list_tasks(USER_ID)
         assert events == []
+
+
+class TestReminderTimeCalculation:
+    """Test the reminder time calculation logic used in reminder_loop"""
+
+    def test_one_hour_before_with_time(self):
+        from datetime import timedelta
+        # Event at 10:30 should remind at 09:30
+        event = {"text": "feb 4 10:30 meeting", "date": "2026-02-04"}
+        event_date = datetime.strptime(event["date"], "%Y-%m-%d")
+        time = extract_time(event["text"])
+        hour, minute = time
+        event_datetime = event_date.replace(hour=hour, minute=minute)
+        remind_at = event_datetime - timedelta(hours=1)
+        assert remind_at == datetime(2026, 2, 4, 9, 30)
+
+    def test_one_hour_before_with_24_00(self):
+        from datetime import timedelta
+        # Event at 24:00 (midnight next day) should remind at 23:00 same day
+        event = {"text": "feb 3 24:00 deadline", "date": "2026-02-03"}
+        event_date = datetime.strptime(event["date"], "%Y-%m-%d")
+        time = extract_time(event["text"])
+        hour, minute = time
+        if hour >= 24:
+            event_date = event_date + timedelta(days=1)
+            hour = 0
+        event_datetime = event_date.replace(hour=hour, minute=minute)
+        remind_at = event_datetime - timedelta(hours=1)
+        assert remind_at == datetime(2026, 2, 3, 23, 0)
+
+    def test_one_day_before_no_time(self):
+        from datetime import timedelta
+        # Event on feb 5 with no time should remind on feb 4
+        event = {"text": "feb 5 birthday", "date": "2026-02-05"}
+        event_date = datetime.strptime(event["date"], "%Y-%m-%d")
+        now = datetime(2026, 2, 4, 3, 30)  # user's reminder time
+        tomorrow = now.date() + timedelta(days=1)
+        assert event_date.date() == tomorrow

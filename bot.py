@@ -3,8 +3,8 @@ import discord
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from storage import Storage
-from datetime import datetime
-from utils import sort_key, get_date, strip_year
+from datetime import datetime, timedelta
+from utils import sort_key, get_date, strip_year, extract_time
 import re
 
 os.makedirs("self", exist_ok=True)
@@ -169,6 +169,7 @@ async def reminder_loop():
     data = storage._read()
     for user_id, user_data in data.items():
         reminder_time = user_data.get("reminder_time", "03:30")
+        # Daily summary at configured time
         if now_utc.strftime("%H:%M") == reminder_time:
             events = user_data.get("events", [])
             if events:
@@ -176,5 +177,33 @@ async def reminder_loop():
                 sorted_events = sorted(events, key=sort_key)
                 msg = '\n'.join([f'{i+1}. {e["text"]} 🐱🌹' for i, e in enumerate(sorted_events)])
                 await user.send(f'```Your upcoming events:\n{msg}```')
+
+        # Per-event reminders: 1 hour before (with time) or 1 day before (no time)
+        events = user_data.get("events", [])
+        for event in events:
+            date_str = event.get("date")
+            if not date_str:
+                continue
+            event_date = datetime.strptime(date_str, "%Y-%m-%d")
+            time = extract_time(event["text"])
+
+            if time:
+                # Has time: remind 1 hour before
+                hour, minute = time
+                if hour >= 24:
+                    event_date = event_date + timedelta(days=1)
+                    hour = 0
+                event_datetime = event_date.replace(hour=hour, minute=minute)
+                remind_at = event_datetime - timedelta(hours=1)
+                if now_utc.strftime("%Y-%m-%d %H:%M") == remind_at.strftime("%Y-%m-%d %H:%M"):
+                    user = await bot.fetch_user(int(user_id))
+                    await user.send(f'```⏰ In 1 hour: {event["text"]} 🐱🌹```')
+            else:
+                # No time: remind 1 day before at user's reminder_time
+                if now_utc.strftime("%H:%M") == reminder_time:
+                    tomorrow = now_utc.date() + timedelta(days=1)
+                    if event_date.date() == tomorrow:
+                        user = await bot.fetch_user(int(user_id))
+                        await user.send(f'```⏰ Tomorrow: {event["text"]} 🐱🌹```')
 
 bot.run(TOKEN)
