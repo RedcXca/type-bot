@@ -40,9 +40,28 @@ class Storage:
         data = self._read()
         events = data.get(user_id, {}).get("events", [])
         if 0 <= index < len(events):
-            events.pop(index)
+            removed = events.pop(index)
+            # Add to backlog
+            data[user_id].setdefault("backlog", [])
+            data[user_id]["backlog"].append(removed)
             self._write(data)
             return True
+        return False
+
+    def list_backlog(self, user_id):
+        return self._read().get(user_id, {}).get("backlog", [])
+
+    def archive_event(self, user_id, event):
+        """Move a specific event to backlog by matching its text and date."""
+        data = self._read()
+        events = data.get(user_id, {}).get("events", [])
+        for i, e in enumerate(events):
+            if e["text"] == event["text"] and e.get("date") == event.get("date"):
+                removed = events.pop(i)
+                data[user_id].setdefault("backlog", [])
+                data[user_id]["backlog"].append(removed)
+                self._write(data)
+                return True
         return False
 
     def edit_task(self, user_id, index, text, date):

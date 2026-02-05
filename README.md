@@ -8,11 +8,14 @@ A simple Discord bot for personal reminders and task management. Built with Pyth
 ## Commands
 
 🐱🌹 **Commands:** 🌹🐱
-- `type add "jan 15 example event"` – Add a new event
-- `type list` – List all your events
-- `type remove 1` – Remove the event at index 1 (1-indexed)
+- `type add jan 15 example event` – Add a new event
+- `type list` – List all your upcoming events
+- `type remove 1` – Remove the event at index 1 (moves to backlog)
 - `type edit 1 "updated event"` – Edit the event at index 1
 - `type append 1 "extra text"` – Append text to the event at index 1
+- `type backlog` – View removed events
+- `type backlog 2026` – View backlog filtered by year
+- `type backlog feb 2026` – View backlog filtered by month and year
 - `type time HH:MM` – Set your daily reminder time (e.g., 23:30)
 - `type time` – View your current reminder time
 - `type timezone -5` – Set your timezone offset (e.g., -5 for EST, 9 for JST)

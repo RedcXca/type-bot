@@ -2,6 +2,37 @@ from datetime import datetime, timedelta
 import re
 
 
+def parse_backlog_filter(filter_str):
+    """Parse filter like '2026' or 'feb 2026'. Returns (year, month) tuple."""
+    filter_str = filter_str.strip().lower()
+    months = {'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+              'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12}
+
+    parts = filter_str.split()
+    year = None
+    month = None
+
+    for part in parts:
+        if part in months:
+            month = months[part]
+        elif part.isdigit() and len(part) == 4:
+            year = int(part)
+
+    return (year, month)
+
+
+def matches_date_filter(date_str, year, month):
+    """Check if date string matches year/month filter."""
+    if not date_str:
+        return False
+    parts = date_str.split('-')
+    if year and parts[0] != str(year):
+        return False
+    if month and int(parts[1]) != month:
+        return False
+    return True
+
+
 def format_tz(tz):
     """Format timezone offset for display (e.g., UTC-5, UTC5.5)"""
     tz_str = str(int(tz)) if tz == int(tz) else str(tz)

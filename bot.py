@@ -4,7 +4,7 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from storage import Storage
 from datetime import datetime, timedelta
-from utils import sort_key, get_date, strip_year, format_tz, get_reminder_time_utc, get_event_utc_datetime
+from utils import sort_key, get_date, strip_year, format_tz, get_reminder_time_utc, get_event_utc_datetime, parse_backlog_filter, matches_date_filter
 
 os.makedirs("self", exist_ok=True)
 with open("self/bot.pid", "a") as f:
@@ -33,14 +33,15 @@ async def on_ready():
 async def help(ctx):
     msg = '''```
 🐱🌹 Type Bot Help 🌹🐱
-> type add "jan 15 10:30 example event"
+> type add jan 15 10:30 example event
 > type list
 > type remove 1
 > type edit 1 "updated event"
 > type append 1 "extra text"
+> type backlog feb 2026
 > type time HH:MM
 > type timezone -5
-> type help
+> type shit
 ```'''
     await ctx.send(msg)
 
@@ -82,6 +83,26 @@ async def list(ctx):
         await ctx.send('```No events found.```')
         return
     sorted_events = sorted(events, key=sort_key)
+    msg = '\n'.join([f'{i+1}. {e["text"]}' for i, e in enumerate(sorted_events)])
+    await ctx.send(f'```{msg}```')
+
+@bot.command()
+async def backlog(ctx, *, filter: str = ""):
+    user_id = str(ctx.author.id)
+    events = storage.list_backlog(user_id)
+    if not events:
+        await ctx.send('```No backlog found.```')
+        return
+
+    # Parse filter: "2026" or "feb 2026"
+    if filter.strip():
+        year, month = parse_backlog_filter(filter)
+        events = [e for e in events if matches_date_filter(e.get("date"), year, month)]
+
+    sorted_events = sorted(events, key=sort_key)
+    if not sorted_events:
+        await ctx.send('```No matching backlog events.```')
+        return
     msg = '\n'.join([f'{i+1}. {e["text"]}' for i, e in enumerate(sorted_events)])
     await ctx.send(f'```{msg}```')
 
@@ -200,8 +221,9 @@ async def reminder_loop():
                 msg = '\n'.join([f'{i+1}. {e["text"]} 🐱🌹' for i, e in enumerate(sorted_events)])
                 await user.send(f'```Your upcoming events:\n{msg}```')
 
-        # Per-event reminders: 1 hour before (with time) or 1 day before (no time)
+        # Per-event reminders and auto-archive
         events = user_data.get("events", [])
+        to_archive = []
         for event in events:
             try:
                 event_utc = get_event_utc_datetime(event, tz_offset)
@@ -211,6 +233,9 @@ async def reminder_loop():
                     if now_utc.strftime("%Y-%m-%d %H:%M") == remind_at_utc.strftime("%Y-%m-%d %H:%M"):
                         user = await bot.fetch_user(int(user_id))
                         await user.send(f'```⏰ In 1 hour: {event["text"]} 🐱🌹```')
+                    # Auto-archive if event time has passed
+                    if now_utc > event_utc:
+                        to_archive.append(event)
                 else:
                     # No time: remind 1 day before at user's reminder_time
                     date_str = event.get("date")
@@ -225,5 +250,9 @@ async def reminder_loop():
                             await user.send(f'```⏰ Tomorrow: {event["text"]} 🐱🌹```')
             except Exception as e:
                 print(f"[ERROR] reminder check failed for event {event}: {e}")
+
+        # Archive expired events
+        for event in to_archive:
+            storage.archive_event(user_id, event)
 
 bot.run(TOKEN)
