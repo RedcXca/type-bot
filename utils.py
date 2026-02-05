@@ -1,5 +1,40 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
+
+
+def format_tz(tz):
+    """Format timezone offset for display (e.g., UTC-5, UTC5.5)"""
+    tz_str = str(int(tz)) if tz == int(tz) else str(tz)
+    return f"UTC{tz_str}"
+
+
+def local_to_utc(local_dt, tz_offset):
+    """Convert local datetime to UTC given timezone offset"""
+    return local_dt - timedelta(hours=tz_offset)
+
+
+def get_reminder_time_utc(reminder_time_str, tz_offset, reference_date):
+    """Convert HH:MM reminder time string to UTC datetime"""
+    hour, minute = map(int, reminder_time_str.split(':'))
+    local_dt = datetime.combine(reference_date, datetime.min.time()).replace(hour=hour, minute=minute)
+    return local_to_utc(local_dt, tz_offset)
+
+
+def get_event_utc_datetime(event, tz_offset):
+    """Get event's datetime in UTC. Returns None if event has no date/time."""
+    date_str = event.get("date")
+    if not date_str:
+        return None
+    event_date = datetime.strptime(date_str, "%Y-%m-%d")
+    time = extract_time(event["text"])
+    if not time:
+        return None
+    hour, minute = time
+    if hour >= 24:
+        event_date = event_date + timedelta(days=1)
+        hour = 0
+    local_dt = event_date.replace(hour=hour, minute=minute)
+    return local_to_utc(local_dt, tz_offset)
 
 # remove year from event text if present
 def strip_year(text: str) -> str:
@@ -48,13 +83,10 @@ def sort_key(event):
     date_str = event.get("date")
     if date_str:
         date = datetime.strptime(date_str, "%Y-%m-%d")
-        # Extract time from text and combine with date
         time = extract_time(text)
         if time:
             hour, minute = time
             if hour >= 24:
-                # 24:00 means midnight of next day
-                from datetime import timedelta
                 date = date + timedelta(days=1)
                 hour = 0
             date = date.replace(hour=hour, minute=minute)

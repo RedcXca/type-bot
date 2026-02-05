@@ -15,7 +15,7 @@ A simple Discord bot for personal reminders and task management. Built with Pyth
 - `type append 1 "extra text"` – Append text to the event at index 1
 - `type time HH:MM` – Set your daily reminder time (e.g., 23:30)
 - `type time` – View your current reminder time
-- `type timezone -5` – Set your timezone offset (e.g., -5 for EST, +9 for JST)
+- `type timezone -5` – Set your timezone offset (e.g., -5 for EST, 9 for JST)
 - `type timezone` – View your current timezone
 
 ## Date & Time Formats
