@@ -88,6 +88,10 @@ async def list(ctx):
 
 @bot.command()
 async def backlog(ctx, *, filter: str = ""):
+    if not filter.strip():
+        await ctx.send('```Usage: type backlog 2026 or type backlog feb 2026```')
+        return
+
     user_id = str(ctx.author.id)
     events = storage.list_backlog(user_id)
     if not events:
@@ -95,9 +99,8 @@ async def backlog(ctx, *, filter: str = ""):
         return
 
     # Parse filter: "2026" or "feb 2026"
-    if filter.strip():
-        year, month = parse_backlog_filter(filter)
-        events = [e for e in events if matches_date_filter(e.get("date"), year, month)]
+    year, month = parse_backlog_filter(filter)
+    events = [e for e in events if matches_date_filter(e.get("date"), year, month)]
 
     sorted_events = sorted(events, key=sort_key)
     if not sorted_events:
