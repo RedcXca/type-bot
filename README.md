@@ -13,8 +13,10 @@ A simple Discord bot for personal reminders and task management. Built with Pyth
 - `type remove 1` – Remove the event at index 1 (1-indexed)
 - `type edit 1 "updated event"` – Edit the event at index 1
 - `type append 1 "extra text"` – Append text to the event at index 1
-- `type time HH:MM` – Set your daily reminder time in UTC (e.g., 18:02)
+- `type time HH:MM` – Set your daily reminder time (e.g., 23:30)
 - `type time` – View your current reminder time
+- `type timezone -5` – Set your timezone offset (e.g., -5 for EST, +9 for JST)
+- `type timezone` – View your current timezone
 
 ## Date & Time Formats
 
@@ -27,10 +29,12 @@ Events are sorted by date and time. Supported formats:
 
 ## Reminders
 
-The bot sends reminders via DM:
-- **Daily summary** – All your events at your configured reminder time (default: 03:30 UTC)
+The bot sends reminders via DM (all times are in your configured timezone):
+- **Daily summary** – All your events at your configured reminder time (default: 03:30)
 - **1 hour before** – Events with a specific time get a reminder 1 hour before
 - **1 day before** – Events without a time get a reminder the day before (at your daily reminder time)
+
+Set your timezone with `type timezone -5` (for EST) so reminders trigger at the right time.
 
 ## Setup
 

@@ -34,12 +34,13 @@ async def on_ready():
 async def help(ctx):
     msg = '''```
 🐱🌹 Type Bot Help 🌹🐱
-> type add "example event"
+> type add "jan 15 10:30 example event"
 > type list
 > type remove 1
 > type edit 1 "updated event"
 > type append 1 "extra text"
-> type time HH:MM (UTC)
+> type time HH:MM
+> type timezone -5
 > type help
 ```'''
     await ctx.send(msg)
@@ -64,13 +65,13 @@ async def add(ctx, *, text: str):
     await ctx.send(f'```Event added ({index}): {stripped}```')
     if first_time:
         await ctx.send('''```
-🐱🌹 This bot will DM you every day at 11:30 pm by default (EST) with your reminders 🌹🐱
-> type add "example event"
+🐱🌹 Welcome! Set your timezone first: type timezone -5 (for EST) 🌹🐱
+> type add jan 15 10:30 example event
 > type list
 > type remove 1
 > type edit 1 "updated event"
 > type append 1 "extra text"
-> type time HH:MM (UTC)
+> type time HH:MM
 > type help
 ```''')
 
@@ -142,22 +143,44 @@ async def append(ctx, index: int, *, text: str):
 @bot.command()
 async def time(ctx, time: str = ""):
     user_id = str(ctx.author.id)
+    data = storage._read()
+    tz = data.get(user_id, {}).get("timezone", 0)
+    tz_str = f"UTC{'+' if tz >= 0 else ''}{tz}"
     if not time or time.strip() == "":
-        data = storage._read()
         reminder_time = data.get(user_id, {}).get("reminder_time", "03:30")
-        await ctx.send(f'```Your current reminder time is set to {reminder_time} UTC.```')
+        await ctx.send(f'```Your reminder time is {reminder_time} ({tz_str}).```')
         return
     try:
         hour, minute = map(int, time.split(':'))
         if 0 <= hour < 24 and 0 <= minute < 60:
             storage.set_reminder_time(user_id, f"{hour:02d}:{minute:02d}")
-            await ctx.send(f'```Reminder time set to {hour:02d}:{minute:02d} UTC. You will be pinged at this time every day.```')
+            await ctx.send(f'```Reminder time set to {hour:02d}:{minute:02d} ({tz_str}).```')
         else:
-            await ctx.send('```Invalid time format. Use HH:MM in UTC (e.g., 18:02).```')
+            await ctx.send('```Invalid time format. Use HH:MM (e.g., 18:02).```')
     except ValueError as ve:
-        await ctx.send('```Invalid time format. Use HH:MM in UTC (e.g., 18:02).```')
+        await ctx.send('```Invalid time format. Use HH:MM (e.g., 18:02).```')
     except Exception as e:
         await ctx.send(f'```Unknown error: {str(e)}```')
+
+@bot.command()
+async def timezone(ctx, offset: str = ""):
+    user_id = str(ctx.author.id)
+    if not offset or offset.strip() == "":
+        data = storage._read()
+        tz = data.get(user_id, {}).get("timezone", 0)
+        sign = "+" if tz >= 0 else ""
+        await ctx.send(f'```Your timezone is set to UTC{sign}{tz}.```')
+        return
+    try:
+        tz = float(offset)
+        if -12 <= tz <= 14:
+            storage.set_timezone(user_id, tz)
+            sign = "+" if tz >= 0 else ""
+            await ctx.send(f'```Timezone set to UTC{sign}{tz}. Event times will be interpreted in this timezone.```')
+        else:
+            await ctx.send('```Invalid timezone. Use an offset like -5 (EST), +5.5 (IST), or -3.5 (NST).```')
+    except ValueError:
+        await ctx.send('```Invalid timezone. Use an offset like -5 (EST), +5.5 (IST), or -3.5 (NST).```')
 
 @bot.command()
 async def shit(ctx):
@@ -168,9 +191,17 @@ async def reminder_loop():
     now_utc = datetime.utcnow()
     data = storage._read()
     for user_id, user_data in data.items():
+        tz_offset = user_data.get("timezone", 0)
         reminder_time = user_data.get("reminder_time", "03:30")
+
+        # Convert user's local reminder_time to UTC for comparison
+        rt_hour, rt_minute = map(int, reminder_time.split(':'))
+        reminder_time_utc = (datetime.combine(now_utc.date(), datetime.min.time())
+                            .replace(hour=rt_hour, minute=rt_minute)
+                            - timedelta(hours=tz_offset))
+
         # Daily summary at configured time
-        if now_utc.strftime("%H:%M") == reminder_time:
+        if now_utc.strftime("%H:%M") == reminder_time_utc.strftime("%H:%M"):
             events = user_data.get("events", [])
             if events:
                 user = await bot.fetch_user(int(user_id))
@@ -181,29 +212,36 @@ async def reminder_loop():
         # Per-event reminders: 1 hour before (with time) or 1 day before (no time)
         events = user_data.get("events", [])
         for event in events:
-            date_str = event.get("date")
-            if not date_str:
-                continue
-            event_date = datetime.strptime(date_str, "%Y-%m-%d")
-            time = extract_time(event["text"])
+            try:
+                date_str = event.get("date")
+                if not date_str:
+                    continue
+                event_date = datetime.strptime(date_str, "%Y-%m-%d")
+                time = extract_time(event["text"])
 
-            if time:
-                # Has time: remind 1 hour before
-                hour, minute = time
-                if hour >= 24:
-                    event_date = event_date + timedelta(days=1)
-                    hour = 0
-                event_datetime = event_date.replace(hour=hour, minute=minute)
-                remind_at = event_datetime - timedelta(hours=1)
-                if now_utc.strftime("%Y-%m-%d %H:%M") == remind_at.strftime("%Y-%m-%d %H:%M"):
-                    user = await bot.fetch_user(int(user_id))
-                    await user.send(f'```⏰ In 1 hour: {event["text"]} 🐱🌹```')
-            else:
-                # No time: remind 1 day before at user's reminder_time
-                if now_utc.strftime("%H:%M") == reminder_time:
-                    tomorrow = now_utc.date() + timedelta(days=1)
-                    if event_date.date() == tomorrow:
+                if time:
+                    # Has time: remind 1 hour before
+                    hour, minute = time
+                    if hour >= 24:
+                        event_date = event_date + timedelta(days=1)
+                        hour = 0
+                    # Event time is local, convert to UTC
+                    event_datetime_local = event_date.replace(hour=hour, minute=minute)
+                    event_datetime_utc = event_datetime_local - timedelta(hours=tz_offset)
+                    remind_at_utc = event_datetime_utc - timedelta(hours=1)
+                    if now_utc.strftime("%Y-%m-%d %H:%M") == remind_at_utc.strftime("%Y-%m-%d %H:%M"):
                         user = await bot.fetch_user(int(user_id))
-                        await user.send(f'```⏰ Tomorrow: {event["text"]} 🐱🌹```')
+                        await user.send(f'```⏰ In 1 hour: {event["text"]} 🐱🌹```')
+                else:
+                    # No time: remind 1 day before at user's reminder_time
+                    if now_utc.strftime("%H:%M") == reminder_time_utc.strftime("%H:%M"):
+                        # Check if event is tomorrow in user's local timezone
+                        now_local = now_utc + timedelta(hours=tz_offset)
+                        tomorrow_local = now_local.date() + timedelta(days=1)
+                        if event_date.date() == tomorrow_local:
+                            user = await bot.fetch_user(int(user_id))
+                            await user.send(f'```⏰ Tomorrow: {event["text"]} 🐱🌹```')
+            except Exception as e:
+                print(f"[ERROR] reminder check failed for event {event}: {e}")
 
 bot.run(TOKEN)

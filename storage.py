@@ -65,3 +65,12 @@ class Storage:
             data[user_id]["reminder_time"] = reminder_time
         self._write(data)
         return True
+
+    def set_timezone(self, user_id, offset):
+        data = self._read()
+        if user_id not in data:
+            data[user_id] = {"events": [], "timezone": offset}
+        else:
+            data[user_id]["timezone"] = offset
+        self._write(data)
+        return True
