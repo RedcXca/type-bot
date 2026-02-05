@@ -55,7 +55,10 @@ async def add(ctx, *, text: str):
 
     date = get_date(text)
     stripped = strip_year(text)
-    storage.add_task(user_id, stripped, date)
+
+    if not storage.add_task(user_id, stripped, date):
+        await ctx.send(f'```Event already exists: {stripped}```')
+        return
 
     # find index of newly added event in sorted list
     events = storage.list_tasks(user_id)

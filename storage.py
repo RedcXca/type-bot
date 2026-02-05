@@ -23,15 +23,26 @@ class Storage:
         with open(self.filename, 'w') as f:
             json.dump(data, f, indent=2)
 
+    def _event_exists(self, events, text, date_str):
+        """Check if an event with same text and date already exists."""
+        for e in events:
+            if e["text"] == text and e.get("date") == date_str:
+                return True
+        return False
+
     def add_task(self, user_id, text, date):
         data = self._read()
         data.setdefault(user_id, {"events": []})
-       
-        data[user_id]["events"].append({
-            "text": text.strip(),
-            "date": date.strftime("%Y-%m-%d") if date != datetime.max else None
-        })
+
+        text = text.strip()
+        date_str = date.strftime("%Y-%m-%d") if date != datetime.max else None
+
+        if self._event_exists(data[user_id]["events"], text, date_str):
+            return False  # Duplicate
+
+        data[user_id]["events"].append({"text": text, "date": date_str})
         self._write(data)
+        return True
 
     def list_tasks(self, user_id):
         return self._read().get(user_id, {}).get("events", [])
@@ -41,9 +52,10 @@ class Storage:
         events = data.get(user_id, {}).get("events", [])
         if 0 <= index < len(events):
             removed = events.pop(index)
-            # Add to backlog
+            # Add to backlog if not duplicate
             data[user_id].setdefault("backlog", [])
-            data[user_id]["backlog"].append(removed)
+            if not self._event_exists(data[user_id]["backlog"], removed["text"], removed.get("date")):
+                data[user_id]["backlog"].append(removed)
             self._write(data)
             return True
         return False
@@ -58,8 +70,10 @@ class Storage:
         for i, e in enumerate(events):
             if e["text"] == event["text"] and e.get("date") == event.get("date"):
                 removed = events.pop(i)
+                # Add to backlog if not duplicate
                 data[user_id].setdefault("backlog", [])
-                data[user_id]["backlog"].append(removed)
+                if not self._event_exists(data[user_id]["backlog"], removed["text"], removed.get("date")):
+                    data[user_id]["backlog"].append(removed)
                 self._write(data)
                 return True
         return False
