@@ -18,6 +18,10 @@ A simple Discord bot for personal reminders and task management. Built with Pyth
 - `type backlog feb 2026` – View backlog filtered by month and year
 - `type time HH:MM` – Set your daily reminder time (e.g., 23:30)
 - `type time` – View your current reminder time
+- `type birthday add feb 4 jason` – Add a birthday (multiple names per date supported)
+- `type birthday list` – List all saved birthdays
+- `type birthday list feb` – List birthdays in a specific month
+- `type birthday remove feb 4 jason` – Remove a birthday
 - `type timezone -5` – Set your timezone offset (e.g., -5 for EST, 9 for JST)
 - `type timezone` – View your current timezone
 
@@ -36,6 +40,7 @@ The bot sends reminders via DM (all times are in your configured timezone):
 - **Daily summary** – All your events at your configured reminder time (default: 03:30)
 - **1 hour before** – Events with a specific time get a reminder 1 hour before
 - **1 day before** – Events without a time get a reminder the day before (at your daily reminder time)
+- **Birthday reminder** – Birthdays tomorrow are announced at your daily reminder time
 
 Set your timezone with `type timezone -5` (for EST) so reminders trigger at the right time.
 

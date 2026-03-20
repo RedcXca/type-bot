@@ -39,6 +39,9 @@ async def help(ctx):
 > type edit 1 "updated event"
 > type append 1 "extra text"
 > type backlog feb 2026
+> type birthday add feb 4 jason
+> type birthday list feb
+> type birthday remove feb 4 jason
 > type time HH:MM
 > type timezone -5
 > type shit
@@ -205,6 +208,85 @@ async def timezone(ctx, offset: str = ""):
     except ValueError:
         await ctx.send('```Invalid timezone. Use an offset like -5 (EST), 5.5 (IST), or -3.5 (NST).```')
 
+MONTHS = {'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+           'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12}
+MONTH_NAMES = {v: k.capitalize() for k, v in MONTHS.items()}
+
+@bot.command()
+async def birthday(ctx, *, text: str = ""):
+    user_id = str(ctx.author.id)
+    parts = text.strip().split()
+
+    if not parts or parts[0] == "list":
+        birthdays = storage.list_birthdays(user_id)
+        if not birthdays:
+            await ctx.send('```No birthdays saved.```')
+            return
+        # optional month filter: type birthday list feb
+        month_filter = None
+        if len(parts) >= 2 and parts[1].lower() in MONTHS:
+            month_filter = f"{MONTHS[parts[1].lower()]:02d}"
+        # sort by month/day (MM-DD sorts lexicographically)
+        sorted_dates = sorted(birthdays.keys())
+        lines = []
+        for d in sorted_dates:
+            month_num, day = int(d.split('-')[0]), int(d.split('-')[1])
+            if month_filter and d.split('-')[0] != month_filter:
+                continue
+            names = ', '.join(birthdays[d])
+            lines.append(f"{MONTH_NAMES[month_num]} {day} - {names}")
+        if not lines:
+            await ctx.send('```No birthdays found for that month.```')
+            return
+        await ctx.send(f'```{chr(10).join(lines)}```')
+        return
+
+    if parts[0] == "add":
+        if len(parts) < 4:
+            await ctx.send('```Usage: type birthday add feb 4 jason```')
+            return
+        month_str = parts[1].lower()
+        if month_str not in MONTHS:
+            await ctx.send('```Invalid month. Use jan, feb, mar, etc.```')
+            return
+        try:
+            day = int(parts[2])
+        except ValueError:
+            await ctx.send('```Invalid day. Use a number like 4, 15, etc.```')
+            return
+        name = ' '.join(parts[3:])
+        date_key = f"{MONTHS[month_str]:02d}-{day:02d}"
+        if storage.add_birthday(user_id, date_key, name):
+            birthdays = storage.list_birthdays(user_id)
+            names = ', '.join(birthdays[date_key])
+            await ctx.send(f'```Birthday added: {MONTH_NAMES[MONTHS[month_str]]} {day} - {names}```')
+        else:
+            await ctx.send(f'```{name} is already on {MONTH_NAMES[MONTHS[month_str]]} {day}.```')
+        return
+
+    if parts[0] == "remove":
+        if len(parts) < 4:
+            await ctx.send('```Usage: type birthday remove feb 4 jason```')
+            return
+        month_str = parts[1].lower()
+        if month_str not in MONTHS:
+            await ctx.send('```Invalid month.```')
+            return
+        try:
+            day = int(parts[2])
+        except ValueError:
+            await ctx.send('```Invalid day.```')
+            return
+        name = ' '.join(parts[3:])
+        date_key = f"{MONTHS[month_str]:02d}-{day:02d}"
+        if storage.remove_birthday(user_id, date_key, name):
+            await ctx.send(f'```Birthday removed: {name} from {MONTH_NAMES[MONTHS[month_str]]} {day}.```')
+        else:
+            await ctx.send(f'```Birthday not found: {name} on {MONTH_NAMES[MONTHS[month_str]]} {day}.```')
+        return
+
+    await ctx.send('```Usage: type birthday add/remove/list```')
+
 @bot.command()
 async def shit(ctx):
     await ctx.send('```type shit 🐱🌹```')
@@ -226,6 +308,17 @@ async def reminder_loop():
                 sorted_events = sorted(events, key=sort_key)
                 msg = '\n'.join([f'{i+1}. {e["text"]} 🐱🌹' for i, e in enumerate(sorted_events)])
                 await user.send(f'```Your upcoming events:\n{msg}```')
+
+            # Birthday reminders at daily summary time
+            birthdays = user_data.get("birthdays", {})
+            if birthdays:
+                now_local = now_utc + timedelta(hours=tz_offset)
+                tomorrow_local = now_local.date() + timedelta(days=1)
+                tomorrow_key = f"{tomorrow_local.month:02d}-{tomorrow_local.day:02d}"
+                if tomorrow_key in birthdays:
+                    names = ', '.join(birthdays[tomorrow_key])
+                    user = await bot.fetch_user(int(user_id))
+                    await user.send(f'```🎂 Birthday tomorrow: {names} 🐱🌹```')
 
         # Per-event reminders and auto-archive
         events = user_data.get("events", [])

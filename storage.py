@@ -107,3 +107,35 @@ class Storage:
             data[user_id]["timezone"] = offset
         self._write(data)
         return True
+
+    def add_birthday(self, user_id, date_key, name):
+        """Add a birthday. date_key is 'MM-DD', name is a string. Appends to list."""
+        data = self._read()
+        data.setdefault(user_id, {"events": []})
+        data[user_id].setdefault("birthdays", {})
+        birthdays = data[user_id]["birthdays"]
+        names = birthdays.get(date_key, [])
+        if name.lower() in [n.lower() for n in names]:
+            return False
+        names.append(name)
+        birthdays[date_key] = names
+        self._write(data)
+        return True
+
+    def remove_birthday(self, user_id, date_key, name):
+        """Remove a birthday by name from a date."""
+        data = self._read()
+        birthdays = data.get(user_id, {}).get("birthdays", {})
+        names = birthdays.get(date_key, [])
+        for i, n in enumerate(names):
+            if n.lower() == name.lower():
+                names.pop(i)
+                if not names:
+                    del birthdays[date_key]
+                self._write(data)
+                return True
+        return False
+
+    def list_birthdays(self, user_id):
+        """Return birthdays dict: {'M/D': ['name1', 'name2'], ...}"""
+        return self._read().get(user_id, {}).get("birthdays", {})
