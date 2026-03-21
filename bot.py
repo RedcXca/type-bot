@@ -310,7 +310,7 @@ async def reminder_loop():
                 await user.send(f'```Your upcoming events:\n{msg}```')
 
             # Birthday reminders at daily summary time
-            birthdays = user_data.get("birthdays", {})
+            birthdays = storage.list_birthdays(user_id)
             if birthdays:
                 now_local = now_utc + timedelta(hours=tz_offset)
                 tomorrow_local = now_local.date() + timedelta(days=1)

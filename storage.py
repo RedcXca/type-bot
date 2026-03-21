@@ -108,34 +108,51 @@ class Storage:
         self._write(data)
         return True
 
+    def _read_birthdays(self):
+        try:
+            with open('birthdays.json', 'r') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            return {}
+
+    def _write_birthdays(self, data):
+        with open('birthdays.json', 'w') as f:
+            json.dump(data, f, indent=2)
+
     def add_birthday(self, user_id, date_key, name):
-        """Add a birthday. date_key is 'MM-DD', name is a string. Appends to list."""
-        data = self._read()
-        data.setdefault(user_id, {"events": []})
-        data[user_id].setdefault("birthdays", {})
-        birthdays = data[user_id]["birthdays"]
-        names = birthdays.get(date_key, [])
-        if name.lower() in [n.lower() for n in names]:
+        """Add a birthday. date_key is 'MM-DD', name is a string."""
+        birthdays = self._read_birthdays()
+        existing = birthdays.get(date_key, "")
+        existing_names = [n.strip() for n in existing.split("/") if n.strip()] if existing else []
+        if name.lower() in [n.lower() for n in existing_names]:
             return False
-        names.append(name)
-        birthdays[date_key] = names
-        self._write(data)
+        existing_names.append(name)
+        birthdays[date_key] = "/".join(existing_names)
+        self._write_birthdays(birthdays)
         return True
 
     def remove_birthday(self, user_id, date_key, name):
         """Remove a birthday by name from a date."""
-        data = self._read()
-        birthdays = data.get(user_id, {}).get("birthdays", {})
-        names = birthdays.get(date_key, [])
-        for i, n in enumerate(names):
+        birthdays = self._read_birthdays()
+        existing = birthdays.get(date_key, "")
+        if not existing:
+            return False
+        existing_names = [n.strip() for n in existing.split("/") if n.strip()]
+        for i, n in enumerate(existing_names):
             if n.lower() == name.lower():
-                names.pop(i)
-                if not names:
+                existing_names.pop(i)
+                if not existing_names:
                     del birthdays[date_key]
-                self._write(data)
+                else:
+                    birthdays[date_key] = "/".join(existing_names)
+                self._write_birthdays(birthdays)
                 return True
         return False
 
     def list_birthdays(self, user_id):
-        """Return birthdays dict: {'M/D': ['name1', 'name2'], ...}"""
-        return self._read().get(user_id, {}).get("birthdays", {})
+        """Return birthdays dict: {'MM-DD': ['name1', 'name2'], ...}"""
+        birthdays = self._read_birthdays()
+        result = {}
+        for date_key, names_str in birthdays.items():
+            result[date_key] = [n.strip() for n in names_str.split("/") if n.strip()]
+        return result
