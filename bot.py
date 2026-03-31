@@ -210,7 +210,7 @@ async def timezone(ctx, offset: str = ""):
 
 MONTHS = {'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
            'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12}
-MONTH_NAMES = {v: k.capitalize() for k, v in MONTHS.items()}
+MONTH_NAMES = {v: k for k, v in MONTHS.items()}
 
 @bot.command()
 async def birthday(ctx, *, text: str = ""):
@@ -220,7 +220,7 @@ async def birthday(ctx, *, text: str = ""):
     if not parts or parts[0] == "list":
         birthdays = storage.list_birthdays(user_id)
         if not birthdays:
-            await ctx.send('```No birthdays saved.```')
+            await ctx.send('```no birthdays saved.```')
             return
         # optional month filter: type birthday list feb
         month_filter = None
@@ -236,56 +236,56 @@ async def birthday(ctx, *, text: str = ""):
             names = ', '.join(birthdays[d])
             lines.append(f"{MONTH_NAMES[month_num]} {day} - {names}")
         if not lines:
-            await ctx.send('```No birthdays found for that month.```')
+            await ctx.send('```no birthdays found for that month.```')
             return
         await ctx.send(f'```{chr(10).join(lines)}```')
         return
 
     if parts[0] == "add":
         if len(parts) < 4:
-            await ctx.send('```Usage: type birthday add feb 4 jason```')
+            await ctx.send('```usage: type birthday add feb 4 jason```')
             return
         month_str = parts[1].lower()
         if month_str not in MONTHS:
-            await ctx.send('```Invalid month. Use jan, feb, mar, etc.```')
+            await ctx.send('```invalid month. use jan, feb, mar, etc.```')
             return
         try:
             day = int(parts[2])
         except ValueError:
-            await ctx.send('```Invalid day. Use a number like 4, 15, etc.```')
+            await ctx.send('```invalid day. use a number like 4, 15, etc.```')
             return
         name = ' '.join(parts[3:])
         date_key = f"{MONTHS[month_str]:02d}-{day:02d}"
         if storage.add_birthday(user_id, date_key, name):
             birthdays = storage.list_birthdays(user_id)
             names = ', '.join(birthdays[date_key])
-            await ctx.send(f'```Birthday added: {MONTH_NAMES[MONTHS[month_str]]} {day} - {names}```')
+            await ctx.send(f'```birthday added: {MONTH_NAMES[MONTHS[month_str]]} {day} - {names}```')
         else:
             await ctx.send(f'```{name} is already on {MONTH_NAMES[MONTHS[month_str]]} {day}.```')
         return
 
     if parts[0] == "remove":
         if len(parts) < 4:
-            await ctx.send('```Usage: type birthday remove feb 4 jason```')
+            await ctx.send('```usage: type birthday remove feb 4 jason```')
             return
         month_str = parts[1].lower()
         if month_str not in MONTHS:
-            await ctx.send('```Invalid month.```')
+            await ctx.send('```invalid month.```')
             return
         try:
             day = int(parts[2])
         except ValueError:
-            await ctx.send('```Invalid day.```')
+            await ctx.send('```invalid day.```')
             return
         name = ' '.join(parts[3:])
         date_key = f"{MONTHS[month_str]:02d}-{day:02d}"
         if storage.remove_birthday(user_id, date_key, name):
-            await ctx.send(f'```Birthday removed: {name} from {MONTH_NAMES[MONTHS[month_str]]} {day}.```')
+            await ctx.send(f'```birthday removed: {name} from {MONTH_NAMES[MONTHS[month_str]]} {day}.```')
         else:
-            await ctx.send(f'```Birthday not found: {name} on {MONTH_NAMES[MONTHS[month_str]]} {day}.```')
+            await ctx.send(f'```birthday not found: {name} on {MONTH_NAMES[MONTHS[month_str]]} {day}.```')
         return
 
-    await ctx.send('```Usage: type birthday add/remove/list```')
+    await ctx.send('```usage: type birthday add/remove/list```')
 
 @bot.command()
 async def shit(ctx):
@@ -318,7 +318,7 @@ async def reminder_loop():
                 if tomorrow_key in birthdays:
                     names = ', '.join(birthdays[tomorrow_key])
                     user = await bot.fetch_user(int(user_id))
-                    await user.send(f'```🎂 Birthday tomorrow: {names} 🐱🌹```')
+                    await user.send(f'```🎂 birthday tomorrow: {names} 🐱🌹```')
 
         # Per-event reminders and auto-archive
         events = user_data.get("events", [])
