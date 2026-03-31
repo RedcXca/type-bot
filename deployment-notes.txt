@@ -1,0 +1,31 @@
+# google cloud e2-micro deployment notes
+
+## first time setup
+sudo apt update && sudo apt install -y python3 python3-pip git screen
+sudo apt install -y python3.12-venv
+
+## start the bot
+nohup python3 bot.py &
+
+## stop the bot
+pkill -f bot.py
+
+## auto-update cron job
+# upload update-bot.sh to ~/update-bot.sh on the server with this content:
+#
+#   #!/bin/bash
+#   cd ~/type-bot
+#   git fetch origin main
+#   LOCAL=$(git rev-parse HEAD)
+#   REMOTE=$(git rev-parse origin/main)
+#   if [ "$LOCAL" != "$REMOTE" ]; then
+#     git pull origin main
+#     pkill -f bot.py
+#     source venv/bin/activate
+#     nohup python3 bot.py &
+#     echo "$(date): updated and restarted" >> ~/update-bot.log
+#   fi
+#
+# then run:
+chmod +x ~/update-bot.sh
+(crontab -l 2>/dev/null; echo "0 */12 * * * /home/maxzylu/update-bot.sh") | crontab -
